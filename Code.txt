@@ -1,0 +1,104 @@
+write comments for every line of code and seperate each section by its name, ie, data pre-procesing, exploration, model prep, evaluation etc"
+import pandas as pd
+import numpy as np 
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+df_movies = pd.read_csv('Movie_Id_Titles.txt')
+df_movies.head()
+df_movies.tail()
+df_movies.info()
+df_movies.describe
+
+df_ratings = pd.read_csv('U.txt', sep = '\t', names = ['user_id', 'item_id','rating', 'timestamp'])
+df_ratings.head()
+df_ratings.tail()
+df_ratings.info()
+df_ratings.describe()
+df_ratings
+
+df_ratings.drop(['timestamp'],axis = 1, inplace = True)
+df_ratings.describe()
+df_ratings.info()
+
+movies_ratings_df = pd.merge(df_ratings,df_movies, on = 'item_id')
+movies_ratings_df
+movies_ratings_df.shape
+movies_ratings_df.groupby('title')['rating'].describe()
+
+
+ratings_df_mean = movies_ratings_df.groupby('title')['rating'].describe()['mean']
+ratings_df_mean
+
+
+ratings_df_count = movies_ratings_df.groupby('title')['rating'].describe()['count']
+ratings_df_count
+
+ratings_df_count_mean = pd.concat([ratings_df_count, ratings_df_mean],axis = 1)
+ratings_df_count_mean
+
+
+ratings_df_count_mean.reset_index()
+
+
+ratings_df_count_mean['mean'].plot(bins = 100, kind = 'hist', color = 'b')
+
+ratings_df_count_mean['count'].plot(bins = 100, kind = 'hist', color = 'r')
+
+
+ratings_df_count_mean[ratings_df_count_mean['mean']==5 ]
+
+ratings_df_count_mean.sort_values('count', ascending = False).head(100)
+
+
+#item based collaborative filtering for one sample 
+userid_movietitle_matrix = movies_ratings_df.pivot_table(index = 'user_id', columns = 'title', values = 'rating')
+userid_movietitle_matrix
+
+titanic = userid_movietitle_matrix['Titanic (1997)']
+titanic
+
+starwars = userid_movietitle_matrix['Star Wars (1977)']
+starwars
+
+
+titanic_correlations = pd.DataFrame(userid_movietitle_matrix.corrwith(titanic), columns = ['Correlation'])
+titanic_correlations
+
+
+titanic_correlations = titanic_correlations.join(ratings_df_count_mean['count'])
+titanic_correlations
+
+titanic_correlations.dropna(inplace=True)
+titanic_correlations
+
+
+titanic_correlations.sort_values('Correlation', ascending = False)
+
+titanic_correlations[titanic_correlations['count']>80].sort_values('Correlation', ascending = False).head()
+
+#create an overall system with the whole dataset
+userid_movietitle_matrix
+
+
+movie_correlations = userid_movietitle_matrix.corr(method = 'pearson', min_periods = 80)
+movie_correlations
+
+
+myRatings = pd.read_csv('My_Ratings.csv')
+myRatings.head()
+
+similar_movies_list = pd.Series()
+
+for i in range (0,2):
+    similar_movie = movie_correlations[ myRatings['Movie Name'][i] ].dropna()
+    similar_movie = similar_movie.map(lambda x:x*myRatings ['Ratings'][i])
+    similar_movie = similar_movies_list.append(similar_movie)
+
+
+similar_movies_list.sort_values(inplace = True, ascending = False)
+print(similar_movies_list.head(10))
+
+
+
+
