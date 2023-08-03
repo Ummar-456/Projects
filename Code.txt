@@ -1,0 +1,160 @@
+# Section: Importing Libraries
+import pandas as pd  # A data manipulation and analysis library
+import numpy as np  # Library for numerical operations
+import matplotlib.pyplot as plt  # Library for creating static, animated, and interactive visualizations in Python
+import seaborn  # Data visualization library based on matplotlib, provides a high-level interface for drawing attractive and informative statistical graphics
+
+from keras.datasets import cifar10  # Importing the cifar10 dataset from keras datasets
+
+# Section: Data Pre-processing
+(X_train, y_train) ,(X_test, y_test) = cifar10.load_data()  # Loading the dataset, separating it into training and test sets
+
+# Printing the shapes of the datasets to understand the dimensions
+X_train.shape
+X_test.shape
+y_train.shape
+y_test.shape
+
+# Section: Data Visualization
+# Displaying a single image from the training set
+i = 1001
+plt.imshow(X_train[i])  # Displaying the 1001th image from the training set
+print(y_train[i])  # Printing the corresponding label
+
+# Displaying a grid of randomly selected images from the training set
+W_grid = 15  # Width of the grid
+L_grid = 15  # Length of the grid
+
+fig, axes = plt.subplots(L_grid, W_grid, figsize = (25,25))  # Setting up the figure and axes for the subplots
+axes = axes.ravel()  # Flattening the 2D matrix of axes into an array
+
+n_train = len(X_train)  # Total number of images in the training set
+for i in np.arange(0,L_grid * W_grid):  # Loop through the grid
+    index = np.random.randint(0, n_train)  # Picking a random image from the training set
+    axes[i].imshow(X_train[index])  # Displaying the randomly picked image
+    axes[i].set_title(y_train[index])  # Setting the label as the title for the image
+    axes[i].axis('off')  # Turning off the axis to keep the image clean
+plt.subplots_adjust(hspace = 0.4)  # Adjusting the space between the images
+
+# Section: Data Pre-processing Continued
+# Converting the datasets to float32 type
+X_train = X_train.astype('float32')  # As neural networks perform better with normalized inputs
+X_test = X_test.astype('float32')
+
+number_cat = 10  # Total number of categories in the dataset
+
+# Converting the class vectors to binary class matrices (one-hot encoding)
+import keras
+y_train = keras.utils.to_categorical(y_train, number_cat)
+y_test = keras.utils.to_categorical(y_test, number_cat)
+
+# Normalizing the datasets (As neural networks perform better with normalized inputs)
+X_train = X_train/255
+X_test = X_test/255
+
+Input_shape = X_train.shape[1:]  # Shape of the input image
+
+# Section: Model Building
+from keras.models import Sequential  # Base class for building the neural network model
+from keras.layers import Conv2D, MaxPooling2D, AveragePooling2D, Dense, Flatten, Dropout  # Importing the necessary layers
+from keras.optimizers import Adam  # Importing the Adam optimizer
+from keras.callbacks import TensorBoard  # Tool for visualizing learning
+
+# Initializing the model
+cnn_model = Sequential()
+# Adding layers to the model
+cnn_model.add(Conv2D(filters = 32, kernel_size = (3,3), activation = 'relu' , input_shape = Input_shape))  # 1st Convolution layer
+cnn_model.add(Conv2D(filters = 32, kernel_size = (3,3), activation = 'relu'))  # 2nd Convolution layer
+cnn_model.add(MaxPooling2D(2,2))  # 1st Pooling layer
+cnn_model.add(Dropout(0.3))  # Dropout layer to avoid overfitting
+
+cnn_model.add(Conv2D(filters = 64, kernel_size = (3,3), activation = 'relu' ))  # 3rd Convolution layer
+cnn_model.add(Conv2D(filters = 64, kernel_size = (3,3), activation = 'relu' ))  # 4th Convolution layer
+cnn_model.add(MaxPooling2D(2,2))  # 2nd Pooling layer
+cnn_model.add(Dropout(0.2))  # Another Dropout layer to avoid overfitting
+
+cnn_model.add(Flatten())  # Flattening layer to convert 2D matrix into a vector
+cnn_model.add(Dense(units = 512, activation = 'relu'))  # Fully connected layer
+cnn_model.add(Dense(units = 512, activation = 'relu'))  # Fully connected layer
+
+cnn_model.add(Dense(units = 10, activation = 'softmax'))  # Output layer (As this is a multi-class classification problem, softmax activation is used)
+
+cnn_model.compile(loss = 'categorical_crossentropy', optimizer = keras.optimizers.RMSprop(learning_rate = 0.001), metrics = ['accuracy'])  # Compiling the model
+
+history = cnn_model.fit(X_train, y_train, batch_size = 32, epochs = 2, shuffle = True)  # Training the model
+
+# Section: Model Evaluation
+evaluation = cnn_model.evaluate(X_test, y_test)  # Evaluating the model
+print('Test Accuracy:{}'.format(evaluation[1]))  # Printing the accuracy
+
+# Section: Making Predictions
+predicted_x = cnn_model.predict(X_test)  # Making predictions on the test set
+classes_x = np.argmax(cnn_model.predict(X_test), axis = 1)  # Getting the class with the highest probability
+
+# Section: Visualizing Predictions
+W = 7  # Width of the grid
+L = 7  # Length of the grid
+
+fig, axes = plt.subplots(L, W, figsize = (12,12))  # Setting up the figure and axes for the subplots
+axes = axes.ravel()  # Flattening the 2D matrix of axes into an array
+
+for i in np.arange(0, L*W):  # Looping through the grid
+    axes[i].imshow(X_test[i])  # Displaying the test image
+    axes[i].set_title('Prediction = {}\n True = {}'.format(predicted_x[i], y_test[i]))  # Setting the title as the prediction and the actual label
+    axes[i].axis('off')  # Turning off the axis to keep the image clean
+plt.subplots_adjust(wspace = 1)  # Adjusting the space between the images
+
+# Section: Confusion Matrix
+from sklearn.metrics import confusion_matrix  # Importing the confusion matrix function
+import seaborn as sns  # Importing the seaborn library for visualizations
+
+cm = confusion_matrix(y_test, predicted_x)  # Creating the confusion matrix
+
+plt.figure(figsize = (10,10))  # Setting the figure size
+sns.heatmap(cm, annot = True)  # Displaying the confusion matrix as a heatmap
+
+# Section: Saving the Model
+import os  # Operating system library
+
+directory = os.path.join(os.getcwd(), 'saved_models')  # Path to save the model
+
+if not os.path.isdir(directory):  # If the directory does not exist
+    os.makedirs(directory)  # Create the directory
+model_path = os.path.join(directory, 'keras_cifar10_trained_model.h5')  # Path of the saved model
+cnn_model.save(model_path)  # Saving the model
+
+# Section: Data Augmentation
+from keras.datasets import cifar10  # Importing the cifar10 dataset again for augmentation
+(X_train, y_train), (X_test, y_test) = cifar10.load_data()  # Loading the dataset
+
+# Converting the datasets to float32 type again
+X_train = X_train.astype('float32')
+X_test = X_test.astype('float32')
+
+from keras.preprocessing.image import ImageDataGenerator  # Importing the ImageDataGenerator class
+dataget_train = ImageDataGenerator(rotation_range = 90)  # Setting up the data generator to augment the images by rotating them 90 degrees
+dataget_train.fit(X_train)  # Fitting the generator to the training images
+
+from scipy.misc.pilutil import toimage  # Importing a utility function to convert arrays to images
+
+fig = plt.figure(figsize = (20,2))  # Setting up the figure for subplots
+for x_batch in dataget_train.flow(X_train_sample, batchsize = n):  # Looping through the batches of augmented images
+    for i in range(0,n):  # Looping through the images in a batch
+        ax = fig.add_subplot(1,n,i+1)  # Setting up the subplot
+        ax.imshow(toimage(x_batch[i]))  # Displaying the augmented image
+    fig.suptitle('Augmented images(rotated 90 degrees)')  # Setting the title for the subplot
+    plt.show()  # Displaying the subplot
+    break;  # Breaking the loop as we just want to see one batch of augmented images
+
+# Section: Training the Model on Augmented Data
+datagen = ImageDataGenerator(  # Setting up the data generator
+			    roation_range = 90,  # Rotating the images 90 degrees
+			    width_shift_range = 0.1,  # Shifting the images 10% of the width
+			    horizontal_flip = True,  # Flipping the images horizontally
+			    vertical_flip = True  # Flipping the images vertically
+				)
+datagen.fit(X_train)  # Fitting the generator to the training images
+cnn_model.fit_generator(datagen.flow(X_train, y_train, batch_size = 32), epochs = 2)  # Training the model on the augmented data
+
+score = cnn_model.evaluate(X_test, y_test)  # Evaluating the model on the test data
+print('Test accuracy', score[1])  # Printing the test accuracy
