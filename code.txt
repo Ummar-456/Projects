@@ -1,0 +1,93 @@
+# Importing necessary libraries
+import numpy as np # For numerical operations
+import pandas as pd # For dataframe operations
+import seaborn as sns # For visualization
+import matplotlib.pyplot as plt # For visualization
+import random # For random number generation
+from prophet import Prophet # For time series forecasting
+
+# Load data
+df = pd.read_csv('avocado.csv') # Loading data from csv file
+df.shape # Checking the shape (rows, columns) of the dataframe
+df.head() # Displaying first few records
+df.tail() # Displaying last few records
+
+# Data Exploration
+
+# Sort the dataframe based on Date
+df = df.sort_values("Date")
+
+# Plotting the average price against date
+plt.figure(figsize = (10,10)) # Set the figure size
+plt.plot(df['Date'], df['AveragePrice']) # Plot date vs average price
+
+# Visualizing the count of data in each region
+plt.figure(figsize = [50,12]) # Set the figure size
+sns.countplot(x = 'region',  data = df) # Create a count plot for 'region'
+plt.xticks(rotation = 45) # Rotate the x-axis labels for better readability
+
+# Visualizing the count of data per year
+sns.countplot(x = 'year', data = df) # Create a count plot for 'year'
+
+# Preparing Data for Modelling
+
+# Selecting necessary columns
+df_prophet = df[ ['Date', 'AveragePrice']]
+
+# Rename the columns as per the requirement of Prophet algorithm
+df_prophet = df_prophet.rename(columns={'Date': 'ds', 'AveragePrice': 'y'}) 
+
+# Modelling 
+
+# Initialize Prophet model
+m = Prophet()
+
+# Fit the model with data
+m.fit(df_prophet)
+
+# Forecasting
+
+# Making future predictions
+future = m.make_future_dataframe(periods = 365) # Create dataframe for future predictions
+forecast = m.predict(future) # Predict the future
+
+# Plot the forecast
+figure = m.plot(forecast, xlabel = 'Date', ylabel = 'Price')
+
+# Region Specific Modelling and Forecasting
+
+# Load data
+df_1 = pd.read_csv('avocado.csv')
+
+# Filter the data for specific region
+df_1_sample = df_1[df_1['region']== 'West']
+
+# Sort the dataframe based on Date
+df_1_sample = df_1_sample.sort_values('Date')
+
+# Plotting the average price against date for specific region
+plt.figure(figsize = (15,10)) # Set the figure size
+plt.plot(df_1_sample['Date'], df_1_sample['AveragePrice']) # Plot date vs average price
+
+# Preparing Data for Modelling
+df_1_sample =df_1_sample.rename(columns = {'Date': 'ds', 'AveragePrice': 'y'})
+
+# Modelling 
+
+# Initialize Prophet model
+m = Prophet()
+
+# Fit the model with data
+m.fit(df_1_sample)
+
+# Forecasting
+
+# Making future predictions
+future = m.make_future_dataframe(periods = 365) # Create dataframe for future predictions
+forecast = m.predict(future) # Predict the future
+
+# Plot the forecast
+figure = m.plot(forecast, xlabel = 'Date', ylabel = 'Price')
+
+# Decomposing the forecast to visualize individual components
+figure = m.plot_components(forecast) 
